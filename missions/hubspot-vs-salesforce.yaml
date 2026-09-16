@@ -1,0 +1,17 @@
+mission:
+  id: ci-hubspot-vs-salesforce
+  objective: >
+    Track Salesforce's 2025-2026 price increases and Agentforce/edition
+    repackaging and their competitive implications for HubSpot
+  success_condition: >
+    Confirm current Salesforce edition pricing and AI add-on costs, and
+    identify total-cost-of-ownership angles competitors use against the
+    new bundle
+  target_classes: [primary, high_trust_secondary]
+  date_sensitivity: month
+  novelty_requirement: high
+  vocabulary_seed:
+    - salesforce pricing increase
+    - salesforce agentforce pricing
+    - hubspot vs salesforce comparison
+  excluded_domains: []

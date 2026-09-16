@@ -1,0 +1,169 @@
+# query-families.yaml
+# Bad search loops usually begin at the query, not at the ranking layer.
+# A person asks the same question the same way and receives the same
+# neighborhood of sources. This file breaks repetition at query design time.
+#
+# A MISSION is a research objective with a defined success condition.
+# A QUERY FAMILY is the set of structurally different phrasings used to
+# pursue that mission, so no single phrasing determines what gets found.
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Every mission must declare these fields. Missions without a success
+# condition are rejected — they become open-ended browsing, which is the rut.
+# ---------------------------------------------------------------------------
+
+mission_schema:
+  required:
+    - id
+    - objective            # what decision this research supports
+    - success_condition    # how you know the mission is complete
+    - target_classes       # which source classes count as answers
+    - date_sensitivity     # any | year | quarter | month | week
+    - novelty_requirement  # low | medium | high
+  optional:
+    - excluded_domains
+    - vocabulary_seed      # domain terms to expand around
+    - cadence              # for scheduled missions
+    - expiry
+
+# ---------------------------------------------------------------------------
+# Query family angles. Each mission generates one query per applicable angle.
+# The point is structural variety, not synonym shuffling.
+# ---------------------------------------------------------------------------
+
+angles:
+
+  canonical:
+    intent: The plainest possible statement of the question.
+    template: "{topic}"
+
+  technical:
+    intent: >
+      Use the vocabulary a practitioner would use. This is the single largest
+      lever — expert terminology reaches expert sources.
+    template: "{technical_term} {qualifier}"
+
+  primary_source_hunt:
+    intent: Go straight for original material, skipping commentary.
+    template: "{topic} filing OR dataset OR specification OR paper"
+
+  mechanism:
+    intent: Ask how it works rather than what it is.
+    template: "how {topic} works mechanism"
+
+  disconfirming:
+    intent: >
+      Deliberately search for the case against. Without this angle the system
+      will happily build you a well-sourced echo chamber.
+    template: "{topic} criticism OR failure OR does not work OR overstated"
+
+  adjacent_field:
+    intent: >
+      Find where another discipline solved the same structural problem.
+      Highest-value angle for genuine novelty.
+    template: "{structural_problem} in {adjacent_domain}"
+
+  practitioner_experience:
+    intent: What people who actually did this report.
+    template: "{topic} lessons learned in production"
+
+  historical:
+    intent: Prior attempts, why they failed, what was already ruled out.
+    template: "{topic} history earlier attempts"
+
+  quantitative:
+    intent: Numbers, benchmarks, effect sizes.
+    template: "{topic} benchmark OR results OR effect size"
+
+  frontier:
+    intent: What changed recently that older sources will not contain.
+    template: "{topic} {current_year} new findings"
+
+# ---------------------------------------------------------------------------
+# Angle selection by novelty requirement.
+# ---------------------------------------------------------------------------
+
+angle_sets:
+  low:
+    - canonical
+    - technical
+    - primary_source_hunt
+  medium:
+    - canonical
+    - technical
+    - primary_source_hunt
+    - mechanism
+    - disconfirming
+    - quantitative
+  high:
+    - technical
+    - primary_source_hunt
+    - mechanism
+    - disconfirming
+    - adjacent_field
+    - practitioner_experience
+    - historical
+    - frontier
+
+# ---------------------------------------------------------------------------
+# Anti-repetition rules.
+# ---------------------------------------------------------------------------
+
+repetition_guards:
+  max_identical_query_reuse: 2
+  reuse_window_days: 30
+  on_limit_reached: >
+    Regenerate the query family with a different vocabulary seed and force
+    inclusion of adjacent_field and disconfirming angles.
+  forbid_single_angle_missions: true
+  min_angles_per_mission: 3
+
+# ---------------------------------------------------------------------------
+# Vocabulary escalation. The mechanism behind the doctor analogy: as the
+# operator's own terms get sharper, queries reach further upstream.
+# ---------------------------------------------------------------------------
+
+vocabulary_escalation:
+  enabled: true
+  method: >
+    Harvest domain-specific terms from retrieved primary sources. Promote
+    terms that appear in primary_source_hunt results but not in the
+    operator's original phrasing. Feed promoted terms back as
+    vocabulary_seed on the next run of the mission.
+  promotion_threshold: 2   # appearances across distinct primary sources
+  review: operator_confirms_before_promotion
+
+# ---------------------------------------------------------------------------
+# Example missions. Replace with your own.
+# ---------------------------------------------------------------------------
+
+missions:
+
+  - id: example-tennis-features
+    objective: >
+      Identify predictive features for match outcome that are underused in
+      public tennis models.
+    success_condition: >
+      Three candidate features sourced from primary or named-expert material,
+      each with a stated mechanism and a way to test it.
+    target_classes: [primary, named_expert]
+    date_sensitivity: year
+    novelty_requirement: high
+    vocabulary_seed:
+      - serve plus one
+      - point level elo
+      - surface adjusted return games won
+    cadence: weekly
+
+  - id: example-category-language
+    objective: >
+      Track how the market describes research-tooling and personal-intelligence
+      products, to sharpen category positioning.
+    success_condition: >
+      A current list of competing category labels with the audience each targets.
+    target_classes: [named_expert, high_trust_secondary]
+    date_sensitivity: quarter
+    novelty_requirement: medium
+    cadence: monthly

@@ -1,0 +1,155 @@
+# source-classes.yaml
+# The governing judgment layer. Every retrieved result is assigned exactly one
+# source class, and class weight is applied BEFORE relevance, recency, or rank
+# position from the origin engine.
+#
+# Weights are multipliers applied to a result's base score.
+# Change weights only through the adaptation loop (see adaptation-rules.yaml),
+# never by hand-editing in the middle of a research mission.
+
+version: 1
+
+classes:
+
+  primary:
+    weight: 1.00
+    description: >
+      Original material. The thing itself, not a description of the thing.
+    includes:
+      - official documentation and specifications
+      - regulatory filings and court records
+      - datasets, APIs, and raw statistics
+      - preprints and peer-reviewed papers
+      - first-party announcements and direct statements
+      - patents
+    example_domains:
+      - sec.gov
+      - arxiv.org
+      - github.com
+      - patents.google.com
+
+  high_trust_secondary:
+    weight: 0.85
+    description: >
+      Rigorous interpretation of primary material by outlets with editorial
+      standards and a correction record.
+    includes:
+      - established research outlets
+      - specialist technical journalism
+      - institutional research notes
+      - textbooks and reference works
+
+  named_expert:
+    weight: 0.80
+    description: >
+      Identifiable practitioners with a verifiable track record in the domain.
+      Weight is per-author, not per-platform — a strong practitioner's blog
+      outranks a weak outlet's article.
+    includes:
+      - practitioner blogs and newsletters
+      - conference talks
+      - long-form technical writing by named authors
+    requires:
+      - author_identified: true
+
+  aggregator:
+    weight: 0.45
+    description: >
+      Useful for discovery and orientation, never as terminal evidence.
+      Follow aggregators upstream to the primary source and re-score.
+    includes:
+      - news aggregators
+      - wikis and encyclopedias
+      - review roundups
+      - AI-generated summaries
+    rule: >
+      An aggregator result may enter a briefing only when the upstream primary
+      source has also been retrieved and cited.
+
+  community:
+    weight: 0.30
+    description: >
+      Exploratory signal. Excellent for finding vocabulary, failure modes,
+      and unresolved questions. Never top-ranked by default.
+    includes:
+      - forums and Q&A sites
+      - social platforms
+      - chat archives
+      - comment threads
+
+  low_trust:
+    weight: 0.05
+    description: >
+      SEO-optimized filler, content farms, thin rewrites, listicles built for
+      ad impressions. Retained at near-zero weight rather than hard-blocked so
+      the system can measure how much of the open web is noise.
+
+  blocked:
+    weight: 0.00
+    description: >
+      Excluded entirely. Reserved for known fabrication, malware, and
+      content that repeatedly failed verification.
+
+# ---------------------------------------------------------------------------
+# Classification signals, in priority order. First decisive match wins.
+# ---------------------------------------------------------------------------
+
+classification_signals:
+  - domain_allowlist          # explicit per-domain assignment
+  - domain_pattern            # .gov / .edu / known TLD heuristics
+  - author_identified         # named author with resolvable credentials
+  - citation_density          # links to primary material per 1000 words
+  - originality_estimate      # proportion not present in earlier sources
+  - ad_density                # ad and affiliate load as noise proxy
+  - correction_history        # does the outlet publish corrections
+  - operator_override         # your manual reclassification always wins
+
+# ---------------------------------------------------------------------------
+# Penalties applied after class weighting. Multiplicative, floor of 0.05.
+# ---------------------------------------------------------------------------
+
+penalties:
+  domain_repetition:
+    description: Third and later result from the same domain in one mission.
+    factor: 0.60
+  near_duplicate_content:
+    description: Content substantially present in an already-retrieved result.
+    factor: 0.25
+  already_seen:
+    description: URL or content hash exists in research memory.
+    factor: 0.30
+  no_named_author:
+    description: Applied only to named_expert and high_trust_secondary claims.
+    factor: 0.75
+  paywall_unverifiable:
+    description: Cannot confirm content matches its claim.
+    factor: 0.70
+
+# ---------------------------------------------------------------------------
+# Bonuses. Additive to the multiplier, cap of 1.40 total.
+# ---------------------------------------------------------------------------
+
+bonuses:
+  novel_domain:
+    description: Domain never before seen in this mission's memory.
+    factor: 1.15
+  upstream_of_aggregator:
+    description: Primary source located by following an aggregator upstream.
+    factor: 1.20
+  contradicts_prior_belief:
+    description: >
+      Actively rewards disconfirming evidence. This is the direct
+      anti-rut mechanism — without it the system optimizes toward
+      comfortable agreement.
+    factor: 1.25
+
+# ---------------------------------------------------------------------------
+# Operator overrides. Yours. Edit freely.
+# ---------------------------------------------------------------------------
+
+domain_allowlist: {}
+  # example:
+  # sec.gov: primary
+  # somefarm.example: low_trust
+
+domain_blocklist: []

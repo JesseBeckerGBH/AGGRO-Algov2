@@ -1,0 +1,17 @@
+mission:
+  id: ci-klaviyo-vs-mailchimp
+  objective: >
+    Track Mailchimp's free-tier and contact-based pricing changes and their
+    competitive implications for Klaviyo
+  success_condition: >
+    Confirm current Mailchimp free-tier limits and contact-counting rules,
+    compare against the reported legacy terms, and identify how competitors
+    position against this pricing structure
+  target_classes: [primary, high_trust_secondary]
+  date_sensitivity: month
+  novelty_requirement: high
+  vocabulary_seed:
+    - mailchimp pricing contacts
+    - mailchimp free plan limits
+    - klaviyo vs mailchimp comparison
+  excluded_domains: []

@@ -1,0 +1,18 @@
+mission:
+  id: ci-mural-vs-miro
+  objective: >
+    Track Miro's 2026 enterprise license repackaging (tier renames and
+    entitlement changes) and its competitive implications for Mural's
+    positioning
+  success_condition: >
+    Confirm current Miro tier names and entitlements, whether contract
+    pricing actually changed, and identify what remains genuinely
+    differentiated for competitors after the repackaging
+  target_classes: [primary, high_trust_secondary]
+  date_sensitivity: month
+  novelty_requirement: high
+  vocabulary_seed:
+    - miro enterprise pricing
+    - miro accelerate collaborate engage
+    - mural vs miro comparison
+  excluded_domains: []

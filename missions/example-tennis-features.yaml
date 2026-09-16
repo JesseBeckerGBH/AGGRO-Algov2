@@ -1,0 +1,18 @@
+# A real mission, not a topic. Copy this file, edit the fields, run:
+#   python -m research_os run --mission missions/<yours>.yaml
+mission:
+  id: example-tennis-features
+  objective: >
+    Identify predictive features for tennis match outcome that are underused
+    in public models
+  success_condition: >
+    Three candidate features sourced from primary or named-expert material,
+    each with a stated mechanism and a way to test it
+  target_classes: [primary, named_expert]
+  date_sensitivity: year
+  novelty_requirement: high
+  vocabulary_seed:
+    - serve plus one
+    - point level elo
+    - surface adjusted return games won
+  excluded_domains: []

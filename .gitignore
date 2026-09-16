@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Local databases and logs
+*.sqlite
+*.sqlite3
+*.db
+logs/
+data/raw/
+data/cache/
+telemetry/*.jsonl
+
+# Build artifacts
+dist/
+build/

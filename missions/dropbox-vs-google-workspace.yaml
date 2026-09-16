@@ -1,0 +1,18 @@
+mission:
+  id: ci-dropbox-vs-google-workspace
+  objective: >
+    Track how Google's AI bundling changes into Workspace plans affect
+    competitive pressure on Dropbox's storage and collaboration positioning
+  success_condition: >
+    Confirm the current official Workspace pricing/packaging terms for AI
+    features, identify at least one concrete consequence for competing
+    storage/collaboration vendors, and surface anything that updates or
+    contradicts the reported January 2025 announcement
+  target_classes: [primary, high_trust_secondary]
+  date_sensitivity: month
+  novelty_requirement: high
+  vocabulary_seed:
+    - google workspace pricing
+    - gemini bundling
+    - dropbox google drive comparison
+  excluded_domains: []

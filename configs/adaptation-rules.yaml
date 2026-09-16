@@ -1,0 +1,170 @@
+# adaptation-rules.yaml
+# The self-annealing layer. This file decides when the system is allowed to
+# change its own behavior, by how much, and under what supervision.
+#
+# The distinction that matters: adaptive, not reckless. Every change is
+# bounded, logged, versioned, evaluated, and reversible. An unbounded
+# self-modifying ranker is model drift, not annealing.
+
+version: 1
+
+# ---------------------------------------------------------------------------
+# Hard invariants. The adaptation loop may never violate these, regardless
+# of what the evidence appears to suggest.
+# ---------------------------------------------------------------------------
+
+invariants:
+  - source_class_precedes_relevance: >
+      Class weighting is always applied before relevance scoring. No
+      adaptation may reorder these stages.
+  - primary_floor: >
+      The primary class weight may never fall below 0.70.
+  - community_ceiling: >
+      The community class weight may never rise above 0.55.
+  - no_engagement_optimization: >
+      Dwell time, click count, and session length may never be optimized
+      as terminal goals. They are diagnostic inputs only. Optimizing them
+      recreates the pathology the system exists to escape.
+  - disconfirming_bonus_immutable: >
+      The bonus for contradicting prior belief may not be reduced by
+      automatic adaptation. Only the operator may change it.
+  - explainability: >
+      Every applied change must record its trigger, magnitude, and the
+      evidence window that justified it.
+
+# ---------------------------------------------------------------------------
+# Failure taxonomy. Every logged failure must be classified into exactly one.
+# ---------------------------------------------------------------------------
+
+failure_classes:
+
+  connector_failure:
+    signals: [timeout, http_error, malformed_response, empty_result_set]
+    severity: low
+    autofix: true
+
+  ranking_failure:
+    signals: [low_value_item_ranked_top_three, operator_marked_useless]
+    severity: high
+    autofix: true
+
+  novelty_failure:
+    signals: [stale_item_presented_as_new, repeat_domain_dominance]
+    severity: high
+    autofix: true
+
+  coverage_failure:
+    signals: [mission_success_condition_unmet, no_primary_source_found]
+    severity: high
+    autofix: false
+    note: Requires query family regeneration, which the operator reviews.
+
+  identity_failure:
+    signals: [research_context_contaminated, personalized_result_detected]
+    severity: critical
+    autofix: false
+    note: Never auto-remediated. Halt and notify the operator.
+
+  briefing_failure:
+    signals: [too_long, too_obvious, not_decision_relevant, unread]
+    severity: medium
+    autofix: true
+
+# ---------------------------------------------------------------------------
+# Adaptation levers, with bounds.
+# ---------------------------------------------------------------------------
+
+levers:
+
+  domain_weight_adjustment:
+    applies_to: [ranking_failure, novelty_failure]
+    step: 0.05
+    max_cumulative_change: 0.30
+    evidence_required: 3        # independent observations before any change
+    cooldown_days: 7
+
+  connector_routing:
+    applies_to: [connector_failure]
+    action: deprioritize_then_retry_with_backoff
+    max_consecutive_demotions: 3
+    evidence_required: 2
+    cooldown_days: 1
+
+  query_family_regeneration:
+    applies_to: [coverage_failure, novelty_failure]
+    action: force_adjacent_field_and_disconfirming_angles
+    evidence_required: 2
+    requires_operator_review: true
+
+  briefing_length_target:
+    applies_to: [briefing_failure]
+    step_words: 50
+    floor_words: 150
+    ceiling_words: 600
+    evidence_required: 3
+
+  class_weight_adjustment:
+    applies_to: [ranking_failure]
+    step: 0.02
+    max_cumulative_change: 0.10
+    evidence_required: 8        # deliberately high; class weights are doctrine
+    requires_operator_review: true
+    cooldown_days: 30
+
+# ---------------------------------------------------------------------------
+# The closed loop.
+# ---------------------------------------------------------------------------
+
+cycle:
+  - detect                # signal crosses threshold
+  - classify              # assign exactly one failure class
+  - log                   # structured record to telemetry
+  - propose               # candidate remediations, ranked least-destructive first
+  - gate                  # check invariants, bounds, evidence count, cooldown
+  - apply                 # least-destructive remediation that passes the gate
+  - observe               # evaluation window
+  - decide                # keep, revise, or roll back
+  - version               # increment policy version, retain diff
+
+evaluation:
+  window_missions: 5
+  keep_if: outcome_quality_improved_or_held
+  rollback_if: outcome_quality_declined
+  escalate_if: three_consecutive_rollbacks_on_same_lever
+
+# ---------------------------------------------------------------------------
+# Drift detection. Catches the rut re-forming inside the system itself.
+# ---------------------------------------------------------------------------
+
+drift_detection:
+  novelty_yield_floor: 0.20         # share of results from unseen domains
+  domain_concentration_ceiling: 0.35 # max share from any single domain
+  primary_share_floor: 0.30          # min share of results in primary class
+  disconfirming_share_floor: 0.10    # min share that challenges prior belief
+  check_cadence: weekly
+  on_breach: >
+    Raise a drift alert, force query family regeneration on affected missions,
+    and require operator acknowledgement before the next scheduled run.
+
+# ---------------------------------------------------------------------------
+# Governance and safety.
+# ---------------------------------------------------------------------------
+
+governance:
+  policy_versioning: required
+  change_log: telemetry/adaptation-log.jsonl
+  operator_override: absolute
+  rollback_retention_versions: 20
+  no_silent_changes: >
+    Any applied adaptation appears in the next briefing footer in one line.
+
+ethics:
+  - no_intelligence_scoring: >
+      The system measures research behavior, never the person's intelligence,
+      aptitude, or worth. No user-facing score may imply otherwise.
+  - telemetry_is_local: >
+      Behavioral signals stay in the operator's own store by default.
+  - no_dark_patterns: >
+      The system must never increase session length as an objective.
+  - learning_signals_are_advisory: >
+      Trajectory measures inform the workflow. They are not grades.
