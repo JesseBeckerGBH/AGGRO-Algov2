@@ -36,6 +36,8 @@ class RunOutput:
     failures: list[dict] = None  # type: ignore[assignment]
     drift: DriftReport = None  # type: ignore[assignment]
     adaptation: dict = None  # type: ignore[assignment]
+    disconfirming_angle_yield: int = 0
+    pending_review: list[dict] = None  # type: ignore[assignment]
 
 
 def load_mission(path: str | Path) -> Mission:
@@ -127,20 +129,18 @@ def run_mission(
         novelty.score(deduped, prior_shares)
         ordered = rerank.rerank(deduped, mission, overlay=overlay)
 
-        mode = brief_mode
-        if mode == "auto":
-            mode = "llm" if llm.available_provider() else "render"
-        if mode == "llm":
-            brief = briefing_mod.synthesize(
-                mission, ordered, top=top, retrieved=retrieved, generated_at=now,
-                provider=llm_provider, model=llm_model,
-                word_target=word_target, adaptation_note=adapt_note,
-            )
-        else:
-            brief = briefing_mod.render(
-                mission, ordered, top=top, retrieved=retrieved, generated_at=now,
-                word_target=word_target, adaptation_note=adapt_note,
-            )
+        # Raw-pool coverage signal for the disconfirming angle (any class,
+        # before the bucket sort's top-K cut) — see telemetry.detect_failures.
+        d_angle_yield = sum(1 for r in ordered if r.query_angle == "disconfirming")
+
+        # Surface any adaptation still awaiting operator review BEFORE this
+        # run's own brief renders, so a proposal from a prior run doesn't sit
+        # silently pending while every subsequent briefing footer says nothing.
+        pending_rows = [r for r in mem.list_policy(mission.id) if r["status"] == "pending_operator"]
+        pending_note = (
+            "; ".join(f"v{r['version']} {r['lever']}" for r in pending_rows)
+            if pending_rows else "none"
+        )
 
         surfaced = ordered[:top]
         n_yield = novelty.yield_of(surfaced)
@@ -153,6 +153,23 @@ def run_mission(
                 if r.query_angle == "disconfirming" or briefing_mod._is_contradicting(r))
             / len(surfaced) if surfaced else 0.0
         )
+
+        mode = brief_mode
+        if mode == "auto":
+            mode = "llm" if llm.available_provider() else "render"
+        if mode == "llm":
+            brief = briefing_mod.synthesize(
+                mission, ordered, top=top, retrieved=retrieved, generated_at=now,
+                provider=llm_provider, model=llm_model,
+                word_target=word_target, adaptation_note=adapt_note,
+                pending_note=pending_note, disconfirming_share=d_share,
+            )
+        else:
+            brief = briefing_mod.render(
+                mission, ordered, top=top, retrieved=retrieved, generated_at=now,
+                word_target=word_target, adaptation_note=adapt_note,
+                pending_note=pending_note, disconfirming_share=d_share,
+            )
 
         # persist the deduped+scored set and the briefing
         by_qid: dict[int, list[Result]] = {}
@@ -174,6 +191,7 @@ def run_mission(
         failures = telemetry.detect_failures(
             mission, surfaced, brief,
             connector_errors=connector_errors, retrieved=retrieved,
+            disconfirming_angle_yield=d_angle_yield,
         )
         drift = telemetry.check_drift(mission.id, mem)
         # adaptation-rules.yaml on_breach: a drift breach must feed the same
@@ -188,11 +206,20 @@ def run_mission(
         # Stage 7: run the closed loop (propose -> gate -> apply -> observe -> decide)
         adapt_result = adaptation.run_cycle(mission, mem, now) if adapt else None
 
+        # Re-check pending_operator rows AFTER run_cycle so a proposal this
+        # very run just created is visible to the caller (API / footer on the
+        # *next* run) rather than only ever appearing one run late.
+        final_pending = [
+            {"version": r["version"], "lever": r["lever"], "note": r["note"]}
+            for r in mem.list_policy(mission.id) if r["status"] == "pending_operator"
+        ]
+
     return RunOutput(
         mission=mission, briefing=brief, reranked=ordered,
         retrieved=retrieved, per_connector=per_connector,
         novelty_yield=n_yield, domain_top_share=top_share, new_vocab=new_vocab,
         failures=failures, drift=drift, adaptation=adapt_result,
+        disconfirming_angle_yield=d_angle_yield, pending_review=final_pending,
     )
 
 

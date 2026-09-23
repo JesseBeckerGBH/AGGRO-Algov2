@@ -28,6 +28,7 @@ def detect_failures(
     *,
     connector_errors: dict[str, tuple[str, str]],
     retrieved: int,
+    disconfirming_angle_yield: int | None = None,
 ) -> list[dict]:
     """Return zero or more failure events. Each is classified into exactly one
     class (adaptation-rules.yaml: "Every logged failure must be classified into
@@ -53,6 +54,22 @@ def detect_failures(
             "failure_class": "coverage_failure", "signal": "no_primary_source_found",
             "severity": _severity("coverage_failure"),
             "detail": "no primary-class result in the surfaced set",
+        })
+
+    # Real coverage failure for the disconfirming angle: it retrieved *nothing
+    # usable at all*, of any class, in the raw pool — not "found lower-class
+    # material that the governing class-bucket-first sort correctly outranked
+    # into the surfaced set." Those are different states; conflating them
+    # (via a surfaced-share metric) pins this failure permanently true for
+    # any commercial-vendor mission, since vendors rarely publish primary
+    # material against themselves.
+    if disconfirming_angle_yield is not None and disconfirming_angle_yield == 0:
+        out.append({
+            "failure_class": "coverage_failure",
+            "signal": "disconfirming_angle_yielded_zero",
+            "severity": _severity("coverage_failure"),
+            "detail": "the disconfirming query angle returned no usable "
+                      "results in the retrieved pool (any class)",
         })
 
     if len(surfaced) >= 4:
@@ -122,8 +139,14 @@ def check_drift(mission_id: str, mem) -> DriftReport:
         breaches.append(("domain_concentration", f"{conc:.0%} > ceiling {conc_ceiling:.0%}"))
     if ps < ps_floor:
         breaches.append(("primary_share", f"{ps:.0%} < floor {ps_floor:.0%}"))
-    if ds < ds_floor:
-        breaches.append(("disconfirming_share", f"{ds:.0%} < floor {ds_floor:.0%}"))
+    # disconfirming_share is intentionally NOT a breach trigger: it is measured
+    # over the surfaced set, downstream of the class-bucket-first sort, so it
+    # reads near-zero for any mission where disconfirming evidence exists but
+    # is lower-class than the surfaced primary results — expected behaviour,
+    # not a failure. It stays in `metrics` (still reported, still visible) as
+    # honest context; the real coverage check is disconfirming_angle_yield in
+    # telemetry.detect_failures, computed on the raw pool before bucket sort.
+    _ = ds_floor  # kept for config parity / future recalibration, unused here
 
     return DriftReport(mission_id, metrics, breaches)
 

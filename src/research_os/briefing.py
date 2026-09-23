@@ -45,7 +45,8 @@ def _confidence(surfaced: list[Result]) -> tuple[str, str]:
 
 def render(mission: Mission, reranked: list[Result], *, top: int = 6,
           retrieved: int = 0, generated_at: str = "",
-          word_target: int = 400, adaptation_note: str = "none") -> Briefing:
+          word_target: int = 400, adaptation_note: str = "none",
+          pending_note: str = "none", disconfirming_share: float = 0.0) -> Briefing:
     surfaced = reranked[:top]
     novel_domains = sorted({r.domain for r in surfaced if r.novel_domain})
     contra = [r for r in surfaced if _is_contradicting(r)]
@@ -73,6 +74,7 @@ def render(mission: Mission, reranked: list[Result], *, top: int = 6,
             "is too narrow or the source classes asked for do not cover this "
             "question yet.\n"
         )
+        lines.append(f"_pending review: {pending_note}_")
         body = "\n".join(lines)
         return Briefing(mission.id, generated_at, body, retrieved, 0, 0)
 
@@ -122,7 +124,9 @@ def render(mission: Mission, reranked: list[Result], *, top: int = 6,
     # Footer
     lines.append(
         f"_retrieved {retrieved} · surfaced {len(surfaced)} · "
-        f"novel domains {len(novel_domains)} · adaptation applied: {adaptation_note}_"
+        f"novel domains {len(novel_domains)} · disconfirming share {disconfirming_share:.0%} "
+        f"(context only, not a coverage gate) · adaptation applied: {adaptation_note} · "
+        f"pending review: {pending_note}_"
     )
 
     body = "\n".join(lines)
@@ -223,6 +227,8 @@ def synthesize(
     model: str | None = None,
     word_target: int = 400,
     adaptation_note: str = "none",
+    pending_note: str = "none",
+    disconfirming_share: float = 0.0,
     _transport=None,
 ) -> Briefing:
     """LLM narrative over the reranked set, obeying prompts/briefing-agent.md.
@@ -264,7 +270,9 @@ def synthesize(
 
     footer = (
         f"\n\n_retrieved {retrieved} · surfaced {len(surfaced)} · "
-        f"novel domains {len(novel_domains)} · adaptation applied: {adaptation_note}_"
+        f"novel domains {len(novel_domains)} · disconfirming share "
+        f"{disconfirming_share:.0%} (context only, not a coverage gate) · "
+        f"adaptation applied: {adaptation_note} · pending review: {pending_note}_"
     )
     return Briefing(
         mission_id=mission.id,

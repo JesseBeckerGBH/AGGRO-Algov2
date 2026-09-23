@@ -65,3 +65,17 @@ def test_domain_repetition_penalty_hits_third_hit():
     ordered = rerank(rs, MISSION)
     third = next(r for r in ordered if r.url.endswith("/3"))
     assert "domain_repetition" in third.penalties
+
+
+def test_disconfirming_angle_gets_the_contradicts_prior_belief_bonus():
+    """source-classes.yaml declares contradicts_prior_belief (1.25x) as "the
+    direct anti-rut mechanism" — it was declared but never read by
+    _bonuses(). This proves it's actually wired now."""
+    plain = _mk("serve plus one preprint", "https://arxiv.org/abs/5001", 1)
+    contra = _mk("serve plus one preprint, contested", "https://arxiv.org/abs/5002", 2)
+    contra.query_angle = "disconfirming"
+    rs = [plain, contra]
+    enrich(rs); classify(rs)
+    rerank(rs, MISSION)
+    assert "contradicts_prior_belief" not in plain.bonuses
+    assert contra.bonuses.get("contradicts_prior_belief") == 1.25

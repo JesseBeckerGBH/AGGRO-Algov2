@@ -39,6 +39,27 @@ def test_no_primary_is_coverage_failure():
     assert any(e["failure_class"] == "coverage_failure" for e in ev)
 
 
+def test_disconfirming_angle_yielded_zero_is_a_real_coverage_failure():
+    surfaced = [_r("arxiv.org", "primary")]
+    ev = telemetry.detect_failures(
+        MISSION, surfaced, _brief(), connector_errors={}, retrieved=5,
+        disconfirming_angle_yield=0,
+    )
+    assert any(e["signal"] == "disconfirming_angle_yielded_zero" for e in ev)
+
+
+def test_aggregator_only_disconfirming_yield_does_not_fire_coverage_failure():
+    """The angle DID retrieve something (aggregator-class) — that's a real
+    yield, even though it will never survive the class-bucket-first sort
+    into the surfaced set. Must not be conflated with 'found nothing'."""
+    surfaced = [_r("arxiv.org", "primary")]
+    ev = telemetry.detect_failures(
+        MISSION, surfaced, _brief(), connector_errors={}, retrieved=5,
+        disconfirming_angle_yield=1,  # >0: aggregator/community hit(s) exist
+    )
+    assert not any(e["signal"] == "disconfirming_angle_yielded_zero" for e in ev)
+
+
 def test_domain_dominance_is_novelty_failure():
     surfaced = [_r("arxiv.org", "primary") for _ in range(5)] + [_r("github.com", "primary")]
     ev = telemetry.detect_failures(MISSION, surfaced, _brief(), connector_errors={}, retrieved=20)
@@ -96,6 +117,11 @@ def test_drift_breaches_become_failure_events():
 def test_drift_flags_each_threshold():
     rep = telemetry.check_drift("m", _StubMem(ny=0.05, conc=0.6, ps=0.1, ds=0.02))
     names = {n for n, _ in rep.breaches}
-    assert names == {
-        "novelty_yield", "domain_concentration", "primary_share", "disconfirming_share",
-    }
+    # disconfirming_share is intentionally NOT a breach trigger: it's measured
+    # over the surfaced set, downstream of the class-bucket-first sort, so a
+    # low value usually means disconfirming evidence was correctly outranked
+    # by class, not that it's missing. Still reported in metrics (context
+    # only) — see telemetry.check_drift's comment. The real coverage check
+    # is disconfirming_angle_yield in detect_failures, covered separately.
+    assert names == {"novelty_yield", "domain_concentration", "primary_share"}
+    assert rep.metrics["disconfirming_share"] == 0.02  # still measured & visible

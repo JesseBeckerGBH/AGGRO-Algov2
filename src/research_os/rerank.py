@@ -112,6 +112,12 @@ def _bonuses(result: Result) -> dict[str, float]:
     out: dict[str, float] = {}
     if result.novel_domain:
         out["novel_domain"] = float(cfg.get("novel_domain", {}).get("factor", 1.15))
+    if result.query_angle == "disconfirming":
+        # source-classes.yaml: "the direct anti-rut mechanism". Was declared
+        # but never read — this is the wiring fix.
+        out["contradicts_prior_belief"] = float(
+            cfg.get("contradicts_prior_belief", {}).get("factor", 1.25)
+        )
     return out
 
 
