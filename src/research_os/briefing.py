@@ -100,6 +100,17 @@ def render(mission: Mission, reranked: list[Result], *, top: int = 6,
     # What contradicts it
     lines.append("## What contradicts it\n")
     if contra:
+        # source-classes.yaml: "an aggregator result may enter a briefing only
+        # when the upstream primary source has also been retrieved and
+        # cited." Never hide the signal (disconfirming_angle_yield treats
+        # aggregator-only disconfirming evidence as real) -- but never let it
+        # sit unlabeled at the same apparent weight as a verified citation.
+        has_strong = any(r.source_class in _STRONG_CLASSES for r in contra)
+        if not has_strong:
+            lines.append(
+                "_No primary or high-trust source corroborates these — "
+                "unverified signal, not a confirmed contradiction:_\n"
+            )
         for r in contra:
             lines.append(
                 f"- **{r.title}** — {r.domain} ({r.source_class}). "
