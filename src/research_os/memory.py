@@ -490,6 +490,59 @@ class Memory:
         self.conn.commit()
         return len(drop)
 
+    # -- reads (API layer) ---------------------------------------------
+
+    def list_missions(self) -> list[sqlite3.Row]:
+        """All known missions, most recently run first."""
+        return list(self.conn.execute(
+            "SELECT mission_id, objective, success_condition, novelty_requirement, "
+            "first_run_at, last_run_at FROM missions ORDER BY last_run_at DESC"
+        ))
+
+    def get_mission_row(self, mission_id: str) -> sqlite3.Row | None:
+        """Single mission row, or None if not yet run."""
+        return self.conn.execute(
+            "SELECT mission_id, objective, success_condition, novelty_requirement, "
+            "first_run_at, last_run_at FROM missions WHERE mission_id = ?",
+            (mission_id,),
+        ).fetchone()
+
+    def list_briefings(self, mission_id: str | None = None,
+                       limit: int = 50) -> list[sqlite3.Row]:
+        """Briefings, optionally filtered to one mission, newest first."""
+        if mission_id:
+            return list(self.conn.execute(
+                "SELECT briefing_id, mission_id, generated_at, body, retrieved, "
+                "surfaced, novel_domains, novelty_yield, primary_share, "
+                "disconfirming_share FROM briefings "
+                "WHERE mission_id = ? ORDER BY briefing_id DESC LIMIT ?",
+                (mission_id, limit),
+            ))
+        return list(self.conn.execute(
+            "SELECT briefing_id, mission_id, generated_at, body, retrieved, "
+            "surfaced, novel_domains, novelty_yield, primary_share, "
+            "disconfirming_share FROM briefings ORDER BY briefing_id DESC LIMIT ?",
+            (limit,),
+        ))
+
+    def get_briefing(self, briefing_id: int) -> sqlite3.Row | None:
+        """Single briefing row by its PK."""
+        return self.conn.execute(
+            "SELECT briefing_id, mission_id, generated_at, body, retrieved, "
+            "surfaced, novel_domains, novelty_yield, primary_share, "
+            "disconfirming_share FROM briefings WHERE briefing_id = ?",
+            (briefing_id,),
+        ).fetchone()
+
+    def list_results(self, mission_id: str, limit: int = 50) -> list[sqlite3.Row]:
+        """Top-scored results for a mission, highest final_score first."""
+        return list(self.conn.execute(
+            "SELECT result_id, title, url, canonical_url, domain, source_class, "
+            "class_signal, final_score, retrieved_at FROM results "
+            "WHERE mission_id = ? ORDER BY final_score DESC LIMIT ?",
+            (mission_id, limit),
+        ))
+
     # -- writes --------------------------------------------------------
     def record_query(self, mission_id: str, q: Query, connector: str,
                      executed_at: str, count: int) -> int:
