@@ -22,6 +22,14 @@ _TRACKING_PARAMS = {
 
 _WS = re.compile(r"\s+")
 
+# An arXiv paper is one source however it is linked: /abs/ or /pdf/, with or
+# without a version suffix (v2) or a .pdf extension. Revisions are the same
+# paper, so counting them separately would inflate the evidence.
+_ARXIV_PATH = re.compile(
+    r"^/(?:abs|pdf)/((?:\d{4}\.\d{4,5})|(?:[a-z\-]+(?:\.[A-Za-z]{2})?/\d{7}))"
+    r"(?:v\d+)?(?:\.pdf)?$"
+)
+
 
 def canonical_url(url: str) -> str:
     parts = urlsplit(url.strip())
@@ -38,6 +46,12 @@ def canonical_url(url: str) -> str:
     path = re.sub(r"/+", "/", parts.path) or "/"
     if len(path) > 1 and path.endswith("/"):
         path = path.rstrip("/")
+
+    if host in ("arxiv.org", "export.arxiv.org"):
+        m = _ARXIV_PATH.match(path)
+        if m:
+            netloc = "arxiv.org"
+            path = f"/abs/{m.group(1)}"
 
     kept = [
         (k, v) for k, v in parse_qsl(parts.query, keep_blank_values=False)

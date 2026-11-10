@@ -22,7 +22,7 @@ def test_dedupe_collapses_exact_dupes_keeps_distinct():
         Result(title="A study", url="https://arxiv.org/abs/1?utm_medium=rss", snippet="same body", raw_rank=2),
         # genuinely different document at a different URL and title -> survives dedupe
         # (its near-duplicate body is handled later, as a rerank penalty)
-        Result(title="A study, revised", url="https://arxiv.org/abs/1v2", snippet="expanded body", raw_rank=3),
+        Result(title="A study, revised", url="https://arxiv.org/abs/2", snippet="expanded body", raw_rank=3),
         Result(title="Different", url="https://example.com/x", snippet="other", raw_rank=4),
     ]
     for r in rs:
@@ -33,6 +33,29 @@ def test_dedupe_collapses_exact_dupes_keeps_distinct():
     assert out[0].raw_rank == 1  # best-ranked instance of the exact dupe kept
     assert {r.canonical_url for r in out} == {
         "https://arxiv.org/abs/1",
-        "https://arxiv.org/abs/1v2",
+        "https://arxiv.org/abs/2",
         "https://example.com/x",
     }
+
+
+def test_arxiv_versions_and_pdf_links_collapse_to_one_paper():
+    base = canonical_url("https://arxiv.org/abs/2401.10101")
+    assert base == "https://arxiv.org/abs/2401.10101"
+    for u in (
+        "https://arxiv.org/abs/2401.10101v2",
+        "https://arxiv.org/pdf/2401.10101v3.pdf",
+        "http://www.arxiv.org/pdf/2401.10101",
+        "https://export.arxiv.org/abs/2401.10101v1",
+    ):
+        assert canonical_url(u) == base
+
+
+def test_arxiv_old_style_ids_and_non_paper_paths():
+    assert canonical_url("https://arxiv.org/abs/hep-th/9901001v2") == \
+        "https://arxiv.org/abs/hep-th/9901001"
+    # not a paper path: left alone
+    assert canonical_url("https://arxiv.org/list/cs.LG/recent") == \
+        "https://arxiv.org/list/cs.LG/recent"
+    # distinct papers stay distinct
+    assert canonical_url("https://arxiv.org/abs/2401.10102") != \
+        canonical_url("https://arxiv.org/abs/2401.10101")

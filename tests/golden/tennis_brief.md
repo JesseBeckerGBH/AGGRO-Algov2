@@ -8,6 +8,7 @@ Identify predictive features for tennis match outcome that are underused in publ
 - **tennis-abstract/point-by-point: raw ATP/WTA point logs** — [github.com](https://github.com/tennis-abstract/pbp-data) (primary). Open dataset of point-by-point sequences for tour-level matches, 2011-present, with serve+1 outcome tags.
 - **tennis-abstract/point-by-point: match charting project docs** — [github.com](https://github.com/tennis-abstract/charting-docs) (primary). Documentation for the volunteer match-charting schema: shot types, directions, depth, and error categories.
 - **Why serve+1 patterns matter more than ace rate** — [substack.com](https://substack.com/@tennisxbt/serve-plus-one) (named_expert). A practitioner breakdown, by a named betting modeller, of why first-strike patterns beat raw ace counts for prediction.
+- **Serve plus one - Tennis terminology** — [en.wikipedia.org](https://en.wikipedia.org/wiki/Serve_plus_one) (aggregator). Serve plus one refers to the server's first groundstroke after the serve; often the point-deciding shot.
 
 ## What contradicts it
 
@@ -21,4 +22,4 @@ medium — no primary-source contradiction retrieved yet.
 
 Test the success condition directly: Three candidate features sourced from primary or named-expert material, each with a stated mechanism and a way to test it. Pursue via the adjacent-field angle if the next run is still thin.
 
-_retrieved 80 · surfaced 6 · novel domains 4 · disconfirming share 17% (context only, not a coverage gate) · adaptation applied: none · pending review: none_
+_retrieved 80 · surfaced 6 · novel domains 5 · disconfirming share 17% (context only, not a coverage gate) · adaptation applied: none · pending review: none_

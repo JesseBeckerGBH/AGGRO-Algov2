@@ -12,8 +12,6 @@ import os
 import re
 from pathlib import Path
 
-import pytest
-
 from research_os.canonical import canonical_url
 from research_os.pipeline import load_mission, run_mission
 
@@ -51,7 +49,6 @@ def test_every_brief_item_links_its_source(tmp_path):
         assert re.search(r"https?://", ln), f"no source link on: {ln[:80]}"
 
 
-@pytest.mark.xfail(strict=True, reason="arXiv version suffix (v2) is not collapsed to one source")
 def test_arxiv_version_suffix_collapses():
     assert canonical_url("https://arxiv.org/abs/2401.10101v2") == \
         canonical_url("https://arxiv.org/abs/2401.10101")
