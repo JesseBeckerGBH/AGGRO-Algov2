@@ -24,6 +24,28 @@ _CONTRA_CUES = (
 )
 
 
+def _link(r: Result) -> str:
+    """The source URL shown to the reader (canonical form when available)."""
+    return r.canonical_url or r.url
+
+
+def _sources_section(results: list[Result]) -> str:
+    """Mechanical source list. Traceability is enforced here, not requested
+    from the model: every result handed to the LLM is listed with its link,
+    whatever the model chose to cite inline."""
+    seen: set[str] = set()
+    lines = ["## Sources", ""]
+    n = 0
+    for r in results:
+        url = _link(r)
+        if url in seen:
+            continue
+        seen.add(url)
+        n += 1
+        lines.append(f"{n}. [{r.title}]({url}) - {r.domain} ({r.source_class})")
+    return "\n".join(lines)
+
+
 def _is_contradicting(r: Result) -> bool:
     if r.query_angle == "disconfirming":
         return True
@@ -91,7 +113,7 @@ def render(mission: Mission, reranked: list[Result], *, top: int = 6,
         for r in fresh:
             why = r.snippet.strip() or "no snippet"
             lines.append(
-                f"- **{r.title}** — {r.domain} ({r.source_class}). {why}"
+                f"- **{r.title}** — [{r.domain}]({_link(r)}) ({r.source_class}). {why}"
             )
     else:
         lines.append("- Nothing here is new relative to research memory.")
@@ -113,7 +135,7 @@ def render(mission: Mission, reranked: list[Result], *, top: int = 6,
             )
         for r in contra:
             lines.append(
-                f"- **{r.title}** — {r.domain} ({r.source_class}). "
+                f"- **{r.title}** — [{r.domain}]({_link(r)}) ({r.source_class}). "
                 f"{r.snippet.strip() or 'no snippet'}"
             )
     else:
@@ -278,6 +300,7 @@ def synthesize(
     # Enforce, don't just request: the class label shown to the reader must
     # match the system's own record, even if the model relabeled it.
     body = _enforce_class_labels(body, {r.domain: r.source_class for r in reranked})
+    body += "\n\n" + _sources_section(surfaced + disconfirming)
 
     footer = (
         f"\n\n_retrieved {retrieved} · surfaced {len(surfaced)} · "

@@ -4,14 +4,14 @@ Identify predictive features for tennis match outcome that are underused in publ
 
 ## What is new
 
-- **Surface-adjusted return games won as a predictor of match outcome** — arxiv.org (primary). We show that return games won, adjusted for surface, carries predictive signal beyond serve-based Elo in ATP matches.
-- **tennis-abstract/point-by-point: raw ATP/WTA point logs** — github.com (primary). Open dataset of point-by-point sequences for tour-level matches, 2011-present, with serve+1 outcome tags.
-- **tennis-abstract/point-by-point: match charting project docs** — github.com (primary). Documentation for the volunteer match-charting schema: shot types, directions, depth, and error categories.
-- **Why serve+1 patterns matter more than ace rate** — substack.com (named_expert). A practitioner breakdown, by a named betting modeller, of why first-strike patterns beat raw ace counts for prediction.
+- **Surface-adjusted return games won as a predictor of match outcome** — [arxiv.org](https://arxiv.org/abs/2401.10101) (primary). We show that return games won, adjusted for surface, carries predictive signal beyond serve-based Elo in ATP matches.
+- **tennis-abstract/point-by-point: raw ATP/WTA point logs** — [github.com](https://github.com/tennis-abstract/pbp-data) (primary). Open dataset of point-by-point sequences for tour-level matches, 2011-present, with serve+1 outcome tags.
+- **tennis-abstract/point-by-point: match charting project docs** — [github.com](https://github.com/tennis-abstract/charting-docs) (primary). Documentation for the volunteer match-charting schema: shot types, directions, depth, and error categories.
+- **Why serve+1 patterns matter more than ace rate** — [substack.com](https://substack.com/@tennisxbt/serve-plus-one) (named_expert). A practitioner breakdown, by a named betting modeller, of why first-strike patterns beat raw ace counts for prediction.
 
 ## What contradicts it
 
-- **Point-level Elo: a technical primer** — arstechnica.com (high_trust_secondary). How point-level Elo differs from match Elo and where it overfits on short samples.
+- **Point-level Elo: a technical primer** — [arstechnica.com](https://arstechnica.com/science/2023/06/point-level-elo-primer) (high_trust_secondary). How point-level Elo differs from match Elo and where it overfits on short samples.
 
 ## Confidence
 

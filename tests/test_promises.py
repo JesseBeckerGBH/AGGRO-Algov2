@@ -42,9 +42,8 @@ def test_brief_matches_golden(tmp_path):
     )
 
 
-@pytest.mark.xfail(strict=True, reason="briefs show domain + class but no source link yet")
 def test_every_brief_item_links_its_source(tmp_path):
-    """The core pitch: every claim is traceable. Remove the xfail once briefs carry URLs."""
+    """The core pitch: every claim is traceable to a source link."""
     body = _brief_body(tmp_path)
     items = [ln for ln in body.splitlines() if ln.startswith("- **")]
     assert items, "brief has no evidence items"
@@ -56,3 +55,27 @@ def test_every_brief_item_links_its_source(tmp_path):
 def test_arxiv_version_suffix_collapses():
     assert canonical_url("https://arxiv.org/abs/2401.10101v2") == \
         canonical_url("https://arxiv.org/abs/2401.10101")
+
+
+def test_llm_brief_gets_mechanical_sources_even_if_model_cites_nothing(monkeypatch):
+    """The model is not trusted to cite. Sources are appended by code."""
+    from research_os.briefing import synthesize
+    from research_os.canonical import enrich
+    from research_os.classify import classify
+    from research_os.models import Mission, Result
+
+    monkeypatch.setenv("GEMINI_API_KEY", "test-key")
+
+    def transport(url, headers, body):
+        return {"candidates": [{"content": {"parts": [{"text": "## Bottom line\nNo links here.\n"}]}}]}
+
+    mission = Mission(id="m", objective="tennis outcome features",
+                      success_condition="three features")
+    rs = [Result(title="Preprint", url="https://arxiv.org/abs/1", snippet="s", raw_rank=1),
+          Result(title="Forum", url="https://reddit.com/r/tennis/a", snippet="c", raw_rank=2)]
+    enrich(rs)
+    classify(rs)
+    body = synthesize(mission, rs, top=2, retrieved=2, _transport=transport).body
+    assert "## Sources" in body
+    assert "https://arxiv.org/abs/1" in body
+    assert "https://reddit.com/r/tennis/a" in body
